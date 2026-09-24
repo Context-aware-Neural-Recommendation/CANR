@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+
+data/raw/customers.csv
+data/raw/transactions_train.csv
+
+**/.ipynb_checkpoints/
