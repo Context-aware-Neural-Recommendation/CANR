@@ -1,0 +1,16 @@
+venv/
+__pycache__/
+*.pyc
+
+Data/Raw/
+Data/processed/
+Data/features/
+
+data/raw/
+data/processed/
+
+data/features/transaction_features.csv
+data/features/training_data.csv
+data/features/negative_sampling_data.csv
+
+.vscode/
