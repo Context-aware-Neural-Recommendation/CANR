@@ -1,33 +1,101 @@
 import os
+
+os.environ["TF_USE_LEGACY_KERAS"] = "1"
+
+import json
 import numpy as np
-import tensorflow as tf
+import tf_keras
 
 
-MODEL_DIR = "models"
-OUTPUT_DIR = "models/embeddings"
+BASE_DIR = os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__))
+)
 
-ITEM_MODEL_PATH = os.path.join(MODEL_DIR, "item_model.keras")
-USER_MODEL_PATH = os.path.join(MODEL_DIR, "user_model.keras")
+MODEL_PATH = os.path.join(
+    BASE_DIR,
+    "models",
+    "exported",
+    "item_model.keras"
+)
+
+VOCAB_PATH = os.path.join(
+    BASE_DIR,
+    "data",
+    "features",
+    "vocabularies.json"
+)
+
+OUTPUT_DIR = os.path.join(
+    BASE_DIR,
+    "models",
+    "embeddings"
+)
+
+EMBEDDINGS_PATH = os.path.join(
+    OUTPUT_DIR,
+    "item_embeddings.npy"
+)
+
+ARTICLE_IDS_PATH = os.path.join(
+    OUTPUT_DIR,
+    "article_ids.npy"
+)
 
 
 def main():
+
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     print("Loading item model...")
-    item_model = tf.keras.models.load_model(ITEM_MODEL_PATH)
 
-    print("Loading user model...")
-    user_model = tf.keras.models.load_model(USER_MODEL_PATH)
+    item_model = tf_keras.models.load_model(
+        MODEL_PATH,
+        compile=False
+    )
 
     print("Item model loaded successfully.")
-    print("User model loaded successfully.")
 
-    print("\nModel information:")
-    print(f"Item model output shape: {item_model.output_shape}")
-    print(f"User model output shape: {user_model.output_shape}")
+    print("Loading article vocabulary...")
 
-    print("\nEmbedding generation pipeline is ready.")
-    print("Next step: generate embeddings using the trained vocabularies.")
+    with open(
+        VOCAB_PATH,
+        "r",
+        encoding="utf-8"
+    ) as file:
+        vocabularies = json.load(file)
+
+    article_ids = np.array(
+        vocabularies["article_id"],
+        dtype=str
+    )
+
+    print("Total articles:", len(article_ids))
+
+    print("\nGenerating item embeddings...")
+
+    item_embeddings = item_model(
+    article_ids
+    ).numpy().astype("float32")
+
+    print(
+        "Item embeddings shape:",
+        item_embeddings.shape
+    )
+
+    np.save(
+        EMBEDDINGS_PATH,
+        item_embeddings
+    )
+
+    np.save(
+        ARTICLE_IDS_PATH,
+        article_ids
+    )
+
+    print("\nItem embeddings exported successfully!")
+
+    print("Embeddings:", EMBEDDINGS_PATH)
+    print("Article IDs:", ARTICLE_IDS_PATH)
 
 
 if __name__ == "__main__":

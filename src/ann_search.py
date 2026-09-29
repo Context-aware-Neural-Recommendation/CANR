@@ -6,6 +6,16 @@ import numpy as np
 import pandas as pd
 import faiss
 import tensorflow as tf
+import tf_keras
+import redis
+
+redis_client = redis.Redis(
+    host="localhost",
+    port=6379,
+    decode_responses=True
+)
+
+print("Redis connected successfully!")
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -22,13 +32,13 @@ TRAINING_DATA = os.path.join(
 
 print("Loading models...")
 
-user_model = tf.keras.models.load_model(
-    os.path.join(MODEL_DIR, "user_model.keras"),
+user_model = tf_keras.models.load_model(
+    os.path.join(BASE_DIR, "models", "exported", "user_model.keras"),
     compile=False
 )
 
-item_model = tf.keras.models.load_model(
-    os.path.join(MODEL_DIR, "item_model.keras"),
+item_model = tf_keras.models.load_model(
+    os.path.join(BASE_DIR, "models", "exported", "item_model.keras"),
     compile=False
 )
 
@@ -58,8 +68,24 @@ item_embeddings = item_model(
 
 print("Item embeddings shape:", item_embeddings.shape)
 
+def get_item_vector(article_id):
+
+    value = redis_client.hget(
+        f"item:{article_id}",
+        "vector"
+    )
+
+    if value is None:
+        return None
+
+    return np.array(
+        [float(x) for x in value.split(",")],
+        dtype="float32"
+    )
+
 
 def recommend(customer_id, top_k=10):
+
 
     customer_id = str(customer_id)
 

@@ -5,6 +5,8 @@ os.environ["TF_USE_LEGACY_KERAS"] = "1"
 import numpy as np
 import faiss
 import tensorflow as tf
+import tf_keras
+import redis
 from fastapi import FastAPI
 
 
@@ -13,7 +15,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = os.path.join(
     BASE_DIR,
     "models",
-    "two_tower"
+    "exported"
 )
 
 FAISS_DIR = os.path.join(
@@ -21,6 +23,14 @@ FAISS_DIR = os.path.join(
     "models",
     "faiss"
 )
+
+redis_client = redis.Redis(
+    host="localhost",
+    port=6379,
+    decode_responses=True
+)
+
+print("Redis connected successfully!")
 
 
 app = FastAPI(
@@ -32,7 +42,7 @@ app = FastAPI(
 
 print("Loading user model...")
 
-user_model = tf.keras.models.load_model(
+user_model = tf_keras.models.load_model(
     os.path.join(
         MODEL_DIR,
         "user_model.keras"
@@ -63,6 +73,11 @@ article_ids = np.load(
 print("FAISS index loaded successfully!")
 print("Indexed items:", faiss_index.ntotal)
 
+def get_user_features(customer_id):
+    return redis_client.hgetall(
+        f"user:{customer_id}"
+    )
+
 
 @app.get("/")
 def home():
@@ -77,6 +92,8 @@ def recommend(
     customer_id: str,
     top_k: int = 10
 ):
+
+    user_features = get_user_features(customer_id)
 
     user_embedding = user_model(
         tf.constant([customer_id])
@@ -103,5 +120,6 @@ def recommend(
 
     return {
         "customer_id": customer_id,
+        "user_features": user_features,
         "recommendations": recommendations
     }
